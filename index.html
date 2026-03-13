@@ -1,0 +1,206 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>STRATCOM</title>
+
+<style>
+
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+font-family:Arial, Helvetica, sans-serif;
+}
+
+body{
+height:100vh;
+overflow:hidden;
+}
+
+/* Main background video */
+
+.video1{
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100%;
+object-fit:cover;
+z-index:-3;
+}
+
+/* Secondary faint video */
+
+.video2{
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100%;
+object-fit:cover;
+opacity:0.5;
+z-index:-2;
+}
+
+/* Translucent layer */
+
+.translucent{
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100%;
+background:rgba(255,255,255,0.15);
+z-index:-1;
+}
+
+/* Title */
+
+h1{
+position:absolute;
+top:40px;
+width:100%;
+text-align:center;
+font-size:42px;
+color:white;
+letter-spacing:2px;
+}
+
+/* Center container */
+
+.center{
+height:100vh;
+display:flex;
+justify-content:center;
+align-items:center;
+}
+
+/* Button */
+
+button{
+padding:18px 45px;
+font-size:18px;
+border:none;
+border-radius:30px;
+background:black;
+color:white;
+cursor:pointer;
+transition:0.3s;
+}
+
+button:hover{
+transform:scale(1.1);
+background:green;
+color:yellowgreen;
+}
+
+/* POPUP */
+
+.popup{
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100%;
+background:rgba(0,0,0,0.7);
+display:flex;
+justify-content:center;
+align-items:center;
+visibility:hidden;
+opacity:0;
+transition:0.3s;
+}
+
+.popup.active{
+visibility:visible;
+opacity:1;
+}
+
+/* popup box */
+
+.popup-box{
+background:white;
+padding:40px;
+border-radius:12px;
+text-align:center;
+max-width:400px;
+}
+
+.popup-box h2{
+margin-bottom:15px;
+}
+
+.popup-box p{
+margin-bottom:25px;
+}
+
+.popup-box button{
+background:black;
+color:white;
+}
+
+.popup-box button:hover{
+background:green;
+}
+
+</style>
+</head>
+
+<body>
+
+<!-- Background Video 1 -->
+<video class="video1" autoplay muted loop>
+<source src="./Video Project 11.mp4" type="video/mp4">
+</video>
+
+<!-- Background Video 2 -->
+<video class="video2" autoplay muted loop>
+<source src="./Recording 2026-03-13 131916.mp4" type="video/mp4">
+</video>
+
+<div class="translucent"></div>
+
+<h1>STRATCOM</h1>
+
+<div class="center">
+<button onclick="openPopup()">HEAD TO THE GLOBAL TRADE WORLD</button>
+</div>
+
+<!-- Popup -->
+
+<div class="popup" id="popup">
+<div class="popup-box">
+
+<h2>Strategic Intelligence Notice</h2>
+
+<p>
+This platform visualizes global trade routes and geopolitical data.  
+By continuing you acknowledge the analytical nature of this simulation.
+</p>
+<p>!! FOR BETTER EXPERIENCE PLEASE APPLY FULLSCREEN BECAUSE SOME OF THE UI COULD GO OUT OF THE PAGE !!</p>
+<p>FOR MOBILES TRY ROTATING THE PHONE AND THEN PLAYING THE WEBSITE</p>
+<p>Still in developmental phase (Lack of Images)</p>
+<p>The Trade Route lines goes from the boundary of a country to the boundary of another linked country</p>
+<button onclick="goToSite()">I Acknowledge</button>
+
+</div>
+</div>
+
+<script>
+
+function openPopup(){
+document.getElementById("popup").classList.add("active");
+}
+
+function goToSite(){
+window.location.href = "./workingglobe.html";
+}
+
+</script>
+
+</body>
+</html>
+```
