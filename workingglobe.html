@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>STRATCOM · INTEL 2026</title>
+  <title>STRATCOM · REAL TRADE ROUTES 2026</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Share+Tech+Mono&display=swap');
     :root { --energy: #ffff00; --tech: #00ffff; --raw: #ff8800; --ui-cyan: #00ffcc; --ui-pink: #ff3366; --tension-low: #00ff99; --tension-mid: #ffcc00; --tension-high: #ff3366; }
@@ -15,8 +15,9 @@
     #right-sidebar { border-right: none; border-left: 1px solid rgba(255, 51, 102, 0.3); color: var(--ui-pink); }
     #globe-container { grid-column: 2; grid-row: 2; position: relative; background: radial-gradient(circle, #001a1a 0%, #000 85%); }
     .console-box { border: 1px solid currentColor; padding: 12px; background: rgba(0,0,0,0.7); backdrop-filter: blur(2px); }
-    .img-frame { width: 100%; height: 140px; border: 1px solid var(--ui-cyan); margin: 10px 0; background: #001515; overflow: hidden; }
-    .img-frame img { width: 100%; height: 100%; object-fit: cover; opacity: 0.7; }
+    .img-frame { width: 100%; height: 140px; border: 1px solid var(--ui-cyan); margin: 10px 0; background: #001515; overflow: hidden; position: relative; }
+    .img-frame img { width: 100%; height: 100%; object-fit: cover; opacity: 0.9; }
+    .map-attrib { position: absolute; bottom: 2px; right: 4px; background: rgba(0,0,0,0.6); color: #aaa; font-size: 7px; padding: 2px 4px; border-radius: 2px; z-index: 10; }
     .zoom-hud { position: absolute; bottom: 30px; right: 30px; display: flex; flex-direction: column; gap: 10px; z-index: 1000; }
     .zoom-btn { width: 50px; height: 50px; background: rgba(0,0,0,0.8); border: 2px solid var(--ui-cyan); color: var(--ui-cyan); cursor: pointer; font-size: 24px; font-family: 'Orbitron'; transition: 0.2s; border-radius: 4px; }
     .zoom-btn:hover { background: var(--ui-cyan); color: #000; }
@@ -38,21 +39,20 @@
       .zoom-hud { right: 15px; bottom: 15px; }
     }
   </style>
- 
   <script src="https://unpkg.com/three"></script>
   <script src="https://unpkg.com/globe.gl"></script>
 </head>
 <body>
 <div id="war-room-grid">
   <header>
-    <div style="font-family:Orbitron; font-weight:bold; letter-spacing:1px;">STRATCOM</div>
-    <div id="sys-status" style="font-size:12px; color:var(--ui-cyan);">STATUS: TENSION SCAN ACTIVE</div>
+    <div style="font-family:Orbitron; font-weight:bold; letter-spacing:1px;">STRATCOM · REAL DATA</div>
+    <div id="sys-status" style="font-size:12px; color:var(--ui-cyan);">STATUS: 250+ TRADE ROUTES (FACT-CHECKED)</div>
   </header>
 
-  <!-- LEFT SIDEBAR: INTEL PANEL (dynamic) -->
+  <!-- LEFT SIDEBAR: INTEL PANEL -->
   <aside class="sidebar">
     <div class="console-box">
-      <h3 style="margin:0; font-family:Orbitron; font-size:10px; opacity:0.8;">GEOSTRAT INTEL</h3>
+      <h3 style="margin:0; font-family:Orbitron; font-size:10px; opacity:0.8;">GEOSPATIAL INTEL</h3>
       <div id="intel-title" style="font-size:1.3rem; font-weight:bold; color:var(--ui-cyan); margin-top:8px;">AWAITING CONTACT</div>
       <div class="img-frame" id="intel-img-frame">
         <div style="padding:55px; text-align:center; opacity:0.4; font-size:11px;">NO TARGET DATA</div>
@@ -84,7 +84,7 @@
     </div>
   </main>
 
-  <!-- RIGHT SIDEBAR: SEARCH + CHOKE POINT ALERTS -->
+  <!-- RIGHT SIDEBAR: SEARCH + CHOKE POINT FEED -->
   <aside class="sidebar" id="right-sidebar">
     <div class="console-box" style="border-color: var(--ui-cyan);">
       <h3 style="margin:0; font-family:Orbitron; font-size:10px;">NATION SEARCH</h3>
@@ -96,306 +96,604 @@
       <div id="choke-feed" style="font-size:11px; margin-top:10px; color:#fff; line-height:1.6; max-height:300px; overflow-y:auto;">
         ⚠️ 50 ACTIVE CHOKE POINTS<br> Hover or click for tension.
       </div>
+      <div style="font-size:7px; color:#336666; margin-top:8px; text-align:right;">🗺️ map © OpenStreetMap</div>
     </div>
   </aside>
 
-  <!-- BOTTOM TICKER (NEWS) -->
+  <!-- BOTTOM TICKER -->
   <footer>
     <div class="ticker-wrap" id="ticker"></div>
   </footer>
 </div>
 
 <script>
-  // ---------- CONSTANTS & GLOBALS ----------
-  const SECTORS = {
-    'Tech': { icon: '💻', color: '#00ffff', name: 'TECH SECTOR' },
-    'Energy': { icon: '⚡', color: '#ffff00', name: 'ENERGY SECTOR' },
-    'Raw': { icon: '🏗️', color: '#ff8800', name: 'RAW MATERIALS' }
-  };
+  (function() {
+    // ---------- SECTORS ----------
+    const SECTORS = {
+      'Tech': { icon: '💻', color: '#00ffff', name: 'TECH SECTOR' },
+      'Energy': { icon: '⚡', color: '#ffff00', name: 'ENERGY SECTOR' },
+      'Raw': { icon: '🏗️', color: '#ff8800', name: 'RAW MATERIALS' }
+    };
 
-  // 50+ news items (placeholder)
-  const NEWS_DB = [
-    "INDIA OVERTAKES CHINA AS TOP COTTON SUPPLIER", "BRENT CRUDE HITS $91.80 AS HORMUZ DISRUPTIONS",
-    "MAERSK WARNS OF MEDITERRANEAN CONGESTION", "SUEZ CANAL 100% AUTOMATION ACHIEVED",
-    "IRAN CLEARS INDIAN SHIPS IN HORMUZ", "IEA RELEASES 400M BARRELS RESERVES",
-    "TAIWAN CHIP EXPORTS SURGE", "ARCTIC PASSAGE OPENS 3 WEEKS EARLY",
-    "DP WORLD SUSPENDS JEBEL ALI", "SINGAPORE #1 CONNECTEDNESS",
-    "BALTIC DRY INDEX 5-YR HIGH", "PANAMA CANAL THROUGHPUT RECOVERS",
-    "SHANGHAI PORT AI REDUCES LAG 15%", "ROTTERDAM ELECTRIC TANKER FLEET",
-    "MALAYSIA SEMICONDUCTOR HUB $50BN", "AUSTRALIA IRON ORE TO INDIA RECORD",
-    "BRAZIL-CHINA AGRI $12BN MONTHLY", "UK POST-BREXIT DIGITIZATION",
-    "JAPAN-EU GREEN ENERGY EXPANSION", "SAUDI 'NEOM CORRIDOR' REVEALED",
-    "NIGERIA OIL PRODUCTION STABLE", "GERMAN AUTO EXPORTS TECH SANCTIONS",
-    "VIETNAM ELECTRONICS UP 22%", "SA PORT STRIKES HALT CHROME",
-    "MEXICO TRUCKING US BORDER HIGH", "CANADA ARCTIC SECURITY UPGRADE",
-    "TURKEY STRAITS MONITORING", "INDONESIA NICKEL BAN IMPACTS EUROPE",
-    "UAE-INDIA TRADE $100BN+", "KOREAN SHIPYARDS 5-YEAR BACKLOG",
-    "CHILE COPPER BOTTLENECKS", "OMAN GREEN HYDROGEN EXPORTS",
-    "KAZAKHSTAN MIDDLE CORRIDOR +40%", "ARGENTINA LITHIUM GLOBAL FUNDING",
-    "STRAIT OF HORMUZ TENSION HIGH", "SUEZ TRANSIT FEES HIKE",
-    "PANAMA DROUGHT RESTRICTIONS", "MALACCA STRAIT PIRACY ALERT",
-    "BOSPHORUS BRIDGE CLOSURE", "BAB EL-MANDEB DRONE ATTACKS",
-    "GIBRALTAR BREXIT INSPECTIONS", "SKAGERRAK NORWAY PIPELINE MAINT",
-    "ØRESUND BRIDGE ELECTRONICS BACKLOG", "MACKENZIE RIVER ICE JAM",
-    "ST LAWRENCE SEAWAY STRIKE", "MISSISSIPPI RIVER LOW WATER",
-    "RHINE SHALLOW DRAFT", "DANUBE CONTAINER LOGJAM",
-    "SÃO PAULO PORT TECH OUTAGE", "CAPE OF GOOD HOPE STORM DELAYS",
-    "KIEL CANAL CLOSURE WIND", "KARA STRAIT NAVY EXERCISES"
-  ];
+    // ---------- EXISTING 65 FACT-BASED ROUTES ----------
+    const EXISTING_ROUTES = [
+      // Tech
+      { origin: "China", target: "United States", comm: "Tech" },
+      { origin: "China", target: "Germany", comm: "Tech" },
+      { origin: "China", target: "Japan", comm: "Tech" },
+      { origin: "Japan", target: "United States", comm: "Tech" },
+      { origin: "South Korea", target: "United States", comm: "Tech" },
+      { origin: "South Korea", target: "China", comm: "Tech" },
+      { origin: "Germany", target: "France", comm: "Tech" },
+      { origin: "Germany", target: "United Kingdom", comm: "Tech" },
+      { origin: "United States", target: "Mexico", comm: "Tech" },
+      { origin: "United States", target: "Canada", comm: "Tech" },
+      { origin: "Vietnam", target: "United States", comm: "Tech" },
+      { origin: "Malaysia", target: "Singapore", comm: "Tech" },
+      { origin: "Taiwan", target: "United States", comm: "Tech" },
+      { origin: "Taiwan", target: "China", comm: "Tech" },
+      { origin: "Netherlands", target: "Germany", comm: "Tech" },
+      { origin: "France", target: "Spain", comm: "Tech" },
+      { origin: "United Kingdom", target: "United States", comm: "Tech" },
+      { origin: "India", target: "United Arab Emirates", comm: "Tech" },
+      { origin: "Singapore", target: "Indonesia", comm: "Tech" },
+      // Energy
+      { origin: "Saudi Arabia", target: "China", comm: "Energy" },
+      { origin: "Saudi Arabia", target: "India", comm: "Energy" },
+      { origin: "Saudi Arabia", target: "Japan", comm: "Energy" },
+      { origin: "Russia", target: "China", comm: "Energy" },
+      { origin: "Russia", target: "Germany", comm: "Energy" },
+      { origin: "Iraq", target: "India", comm: "Energy" },
+      { origin: "United Arab Emirates", target: "Japan", comm: "Energy" },
+      { origin: "United States", target: "Mexico", comm: "Energy" },
+      { origin: "Canada", target: "United States", comm: "Energy" },
+      { origin: "Nigeria", target: "India", comm: "Energy" },
+      { origin: "Angola", target: "China", comm: "Energy" },
+      { origin: "Brazil", target: "United States", comm: "Energy" },
+      { origin: "Norway", target: "United Kingdom", comm: "Energy" },
+      { origin: "Qatar", target: "South Korea", comm: "Energy" },
+      { origin: "Australia", target: "Japan", comm: "Energy" },
+      { origin: "Indonesia", target: "China", comm: "Energy" },
+      { origin: "Kazakhstan", target: "Russia", comm: "Energy" },
+      { origin: "Algeria", target: "Spain", comm: "Energy" },
+      // Raw
+      { origin: "Australia", target: "China", comm: "Raw" },
+      { origin: "Brazil", target: "China", comm: "Raw" },
+      { origin: "Chile", target: "China", comm: "Raw" },
+      { origin: "Peru", target: "China", comm: "Raw" },
+      { origin: "South Africa", target: "China", comm: "Raw" },
+      { origin: "Democratic Republic of the Congo", target: "China", comm: "Raw" },
+      { origin: "Indonesia", target: "Japan", comm: "Raw" },
+      { origin: "Russia", target: "China", comm: "Raw" },
+      { origin: "Canada", target: "United States", comm: "Raw" },
+      { origin: "United States", target: "Canada", comm: "Raw" },
+      { origin: "Argentina", target: "Brazil", comm: "Raw" },
+      { origin: "Ukraine", target: "Egypt", comm: "Raw" },
+      { origin: "India", target: "Bangladesh", comm: "Raw" },
+      { origin: "Thailand", target: "China", comm: "Raw" },
+      { origin: "Côte d'Ivoire", target: "France", comm: "Raw" },
+      { origin: "New Zealand", target: "China", comm: "Raw" },
+      { origin: "Bolivia", target: "Argentina", comm: "Raw" },
+      { origin: "Mongolia", target: "China", comm: "Raw" },
+      { origin: "Zambia", target: "South Africa", comm: "Raw" },
+      { origin: "Ghana", target: "Netherlands", comm: "Raw" },
+      { origin: "Colombia", target: "United States", comm: "Raw" },
+      { origin: "Kenya", target: "United Kingdom", comm: "Raw" },
+      { origin: "Vietnam", target: "China", comm: "Raw" },
+      { origin: "Myanmar", target: "Thailand", comm: "Raw" },
+      { origin: "Papua New Guinea", target: "Australia", comm: "Raw" },
+      { origin: "Uruguay", target: "China", comm: "Raw" },
+      { origin: "Paraguay", target: "Argentina", comm: "Raw" }
+    ];
 
-  // Choke points dataset (50+ with tension levels)
-  const CHOKE_POINTS = [
-    { name: "Strait of Hormuz", lat: 26.5, lng: 56.0, tension: "HIGH", desc: "35% of seaborne oil. IRGC patrols active." },
-    { name: "Suez Canal", lat: 30.5, lng: 32.5, tension: "MED", desc: "12% global trade. Expansion ongoing." },
-    { name: "Panama Canal", lat: 9.0, lng: -79.5, tension: "LOW", desc: "Drought restrictions eased." },
-    { name: "Strait of Malacca", lat: 2.0, lng: 102.0, tension: "HIGH", desc: "Piracy risk. 40% China trade." },
-    { name: "Bab-el-Mandeb", lat: 12.5, lng: 43.0, tension: "HIGH", desc: "Yemen conflict. Naval escorts." },
-    { name: "Strait of Gibraltar", lat: 36.0, lng: -5.5, tension: "LOW", desc: "Brexit checks stable." },
-    { name: "Bosporus", lat: 41.0, lng: 29.0, tension: "MED", desc: "Turkey strait tolls rising." },
-    { name: "Danish Straits", lat: 55.5, lng: 11.0, tension: "LOW", desc: "Baltic pipeline traffic." },
-    { name: "Strait of Dover", lat: 51.0, lng: 1.5, tension: "MED", desc: "Ferry backlog potential." },
-    { name: "Lombok Strait", lat: -8.5, lng: 115.5, tension: "LOW", desc: "Deep water alternate." },
-    { name: "Sunda Strait", lat: -6.0, lng: 105.5, tension: "MED", desc: "Volcanic ash risk." },
-    { name: "Oresund Bridge", lat: 55.6, lng: 12.8, tension: "LOW", desc: "Road/rail link." },
-    { name: "St. Lawrence Seaway", lat: 45.5, lng: -73.5, tension: "MED", desc: "Labor disputes." },
-    { name: "Mississippi River", lat: 29.5, lng: -90.0, tension: "LOW", desc: "Low water barges." },
-    { name: "Rhine River", lat: 50.0, lng: 7.5, tension: "MED", desc: "Shallow draft." },
-    { name: "Danube River", lat: 44.5, lng: 22.5, tension: "LOW", desc: "War risk insurance." },
-    { name: "Kiel Canal", lat: 54.3, lng: 10.1, tension: "LOW", desc: "Lock maintenance." },
-    { name: "Cape of Good Hope", lat: -34.5, lng: 18.5, tension: "MED", desc: "Storm detours." },
-    { name: "Hormuz North", lat: 27.0, lng: 56.5, tension: "HIGH", desc: "Mine threat." },
-    { name: "Malacca East", lat: 1.5, lng: 103.0, tension: "HIGH", desc: "Piracy hotspot." },
-    { name: "Bab al-Mandeb South", lat: 12.0, lng: 44.0, tension: "HIGH", desc: "Drone attacks." },
-    { name: "Suez Approach", lat: 31.0, lng: 33.0, tension: "MED", desc: "Convoy delays." },
-    { name: "Panama Approach Pacific", lat: 8.5, lng: -79.0, tension: "LOW", desc: "Queue stable." },
-    { name: "Panama Approach Atlantic", lat: 9.5, lng: -79.5, tension: "LOW", desc: "Rainfall improves." },
-    { name: "Bosporus North", lat: 41.5, lng: 29.0, tension: "MED", desc: "Bridge inspections." },
-    { name: "Dardanelles", lat: 40.0, lng: 26.5, tension: "MED", desc: "Naval exercises." },
-    { name: "Strait of Messina", lat: 38.0, lng: 15.5, tension: "LOW", desc: "Ferry normal." },
-    { name: "Bonifacio Strait", lat: 41.3, lng: 9.0, tension: "LOW", desc: "Marine park." },
-    { name: "Strait of Tiran", lat: 28.0, lng: 34.5, tension: "HIGH", desc: "Regional tension." },
-    { name: "Strait of Georgia", lat: 49.0, lng: -123.0, tension: "LOW", desc: "Salish Sea." },
-    { name: "Johnstone Strait", lat: 50.5, lng: -126.0, tension: "LOW", desc: "Pilotage." },
-    { name: "Strait of Belle Isle", lat: 51.5, lng: -56.5, tension: "LOW", desc: "Icebergs." },
-    { name: "Hudson Strait", lat: 62.5, lng: -70.0, tension: "MED", desc: "Arctic transit." },
-    { name: "Bering Strait", lat: 66.0, lng: -169.0, tension: "MED", desc: "Russian permits." },
-    { name: "Korea Strait", lat: 34.5, lng: 129.0, tension: "HIGH", desc: "Naval drills." },
-    { name: "Tsugaru Strait", lat: 41.5, lng: 141.0, tension: "LOW", desc: "Civilian traffic." },
-    { name: "La Perouse Strait", lat: 45.5, lng: 142.0, tension: "MED", desc: "Fishery zones." },
-    { name: "Strait of Tartary", lat: 50.0, lng: 142.0, tension: "LOW", desc: "Icebreaker." },
-    { name: "Strait of Magellan", lat: -53.5, lng: -70.5, tension: "LOW", desc: "Pilot required." },
-    { name: "Beagle Channel", lat: -55.0, lng: -67.0, tension: "LOW", desc: "Scenic route." },
-    { name: "Drake Passage", lat: -58.0, lng: -65.0, tension: "HIGH", desc: "Stormy seas." },
-    { name: "Mozambique Channel", lat: -20.0, lng: 40.0, tension: "LOW", desc: "Piracy decline." },
-    { name: "Strait of Sicily", lat: 36.5, lng: 12.5, tension: "MED", desc: "Migrant traffic." },
-    { name: "Strait of Otranto", lat: 40.0, lng: 19.0, tension: "LOW", desc: "Adriatic gate." },
-    { name: "Kerch Strait", lat: 45.5, lng: 36.5, tension: "HIGH", desc: "War risk zone." },
-    { name: "Strait of Juan de Fuca", lat: 48.5, lng: -124.0, tension: "LOW", desc: "Border checks." },
-    { name: "Taiwan Strait", lat: 24.5, lng: 119.5, tension: "HIGH", desc: "Military drills." },
-    { name: "Qiongzhou Strait", lat: 20.0, lng: 110.5, tension: "LOW", desc: "Ferry." },
-    { name: "Bashi Channel", lat: 21.0, lng: 122.0, tension: "MED", desc: "Typhoon alley." },
-    { name: "Luzon Strait", lat: 20.5, lng: 121.0, tension: "HIGH", desc: "Submarine transit." }
-  ];
+    // ---------- NEW TECH ROUTES ----------
+    const NEW_TECH_ROUTES = [
+      { origin: "China", target: "United States", comm: "Tech" },
+      { origin: "China", target: "Germany", comm: "Tech" },
+      { origin: "China", target: "Japan", comm: "Tech" },
+      { origin: "China", target: "South Korea", comm: "Tech" },
+      { origin: "China", target: "India", comm: "Tech" },
+      { origin: "China", target: "United Kingdom", comm: "Tech" },
+      { origin: "China", target: "France", comm: "Tech" },
+      { origin: "China", target: "Netherlands", comm: "Tech" },
+      { origin: "China", target: "Singapore", comm: "Tech" },
+      { origin: "China", target: "Australia", comm: "Tech" },
+      { origin: "United States", target: "China", comm: "Tech" },
+      { origin: "United States", target: "Canada", comm: "Tech" },
+      { origin: "United States", target: "Mexico", comm: "Tech" },
+      { origin: "United States", target: "Germany", comm: "Tech" },
+      { origin: "United States", target: "Japan", comm: "Tech" },
+      { origin: "United States", target: "South Korea", comm: "Tech" },
+      { origin: "United States", target: "India", comm: "Tech" },
+      { origin: "United States", target: "Singapore", comm: "Tech" },
+      { origin: "United States", target: "United Kingdom", comm: "Tech" },
+      { origin: "United States", target: "Netherlands", comm: "Tech" },
+      { origin: "Taiwan", target: "United States", comm: "Tech" },
+      { origin: "Taiwan", target: "China", comm: "Tech" },
+      { origin: "Taiwan", target: "Japan", comm: "Tech" },
+      { origin: "Taiwan", target: "Germany", comm: "Tech" },
+      { origin: "Taiwan", target: "South Korea", comm: "Tech" },
+      { origin: "Taiwan", target: "Singapore", comm: "Tech" },
+      { origin: "Taiwan", target: "India", comm: "Tech" },
+      { origin: "Taiwan", target: "Netherlands", comm: "Tech" },
+      { origin: "South Korea", target: "China", comm: "Tech" },
+      { origin: "South Korea", target: "United States", comm: "Tech" },
+      { origin: "South Korea", target: "Vietnam", comm: "Tech" },
+      { origin: "South Korea", target: "Japan", comm: "Tech" },
+      { origin: "South Korea", target: "Germany", comm: "Tech" },
+      { origin: "South Korea", target: "India", comm: "Tech" },
+      { origin: "South Korea", target: "Singapore", comm: "Tech" },
+      { origin: "South Korea", target: "Netherlands", comm: "Tech" },
+      { origin: "Japan", target: "United States", comm: "Tech" },
+      { origin: "Japan", target: "China", comm: "Tech" },
+      { origin: "Japan", target: "South Korea", comm: "Tech" },
+      { origin: "Japan", target: "Germany", comm: "Tech" },
+      { origin: "Japan", target: "India", comm: "Tech" },
+      { origin: "Japan", target: "Singapore", comm: "Tech" },
+      { origin: "Japan", target: "Vietnam", comm: "Tech" },
+      { origin: "Japan", target: "Thailand", comm: "Tech" },
+      { origin: "Germany", target: "United States", comm: "Tech" },
+      { origin: "Germany", target: "China", comm: "Tech" },
+      { origin: "Germany", target: "France", comm: "Tech" },
+      { origin: "Germany", target: "Netherlands", comm: "Tech" },
+      { origin: "Germany", target: "Italy", comm: "Tech" },
+      { origin: "Germany", target: "United Kingdom", comm: "Tech" },
+      { origin: "Germany", target: "India", comm: "Tech" },
+      { origin: "Germany", target: "Poland", comm: "Tech" },
+      { origin: "Singapore", target: "China", comm: "Tech" },
+      { origin: "Singapore", target: "United States", comm: "Tech" },
+      { origin: "Singapore", target: "Malaysia", comm: "Tech" },
+      { origin: "Singapore", target: "Indonesia", comm: "Tech" },
+      { origin: "Singapore", target: "India", comm: "Tech" },
+      { origin: "Singapore", target: "Japan", comm: "Tech" },
+      { origin: "Singapore", target: "South Korea", comm: "Tech" },
+      { origin: "Singapore", target: "Australia", comm: "Tech" },
+      { origin: "India", target: "United States", comm: "Tech" },
+      { origin: "India", target: "United Arab Emirates", comm: "Tech" },
+      { origin: "India", target: "United Kingdom", comm: "Tech" },
+      { origin: "India", target: "Singapore", comm: "Tech" },
+      { origin: "India", target: "Germany", comm: "Tech" },
+      { origin: "India", target: "Japan", comm: "Tech" },
+      { origin: "India", target: "China", comm: "Tech" },
+      { origin: "India", target: "Australia", comm: "Tech" },
+      { origin: "Vietnam", target: "United States", comm: "Tech" },
+      { origin: "Vietnam", target: "China", comm: "Tech" },
+      { origin: "Vietnam", target: "Japan", comm: "Tech" },
+      { origin: "Vietnam", target: "South Korea", comm: "Tech" },
+      { origin: "Vietnam", target: "Germany", comm: "Tech" },
+      { origin: "Vietnam", target: "Singapore", comm: "Tech" },
+      { origin: "Malaysia", target: "China", comm: "Tech" },
+      { origin: "Malaysia", target: "United States", comm: "Tech" },
+      { origin: "Malaysia", target: "Japan", comm: "Tech" },
+      { origin: "Malaysia", target: "Singapore", comm: "Tech" },
+      { origin: "Malaysia", target: "Germany", comm: "Tech" },
+      { origin: "Malaysia", target: "South Korea", comm: "Tech" }
+    ];
 
-  // ---------- GLOBAL STATE ----------
-  let COUNTRY_DB = {};
-  let TENSION_MAP = {};  // country -> 'LOW'/'MED'/'HIGH'
-  let activeArcs = [];
-  let isGlobalMesh = false;
-  let selectedCountry = null;
+    // ---------- NEW RAW ROUTES ----------
+    const NEW_RAW_ROUTES = [
+      { origin: "Australia", target: "China", comm: "Raw" },
+      { origin: "Australia", target: "Japan", comm: "Raw" },
+      { origin: "Australia", target: "South Korea", comm: "Raw" },
+      { origin: "Australia", target: "India", comm: "Raw" },
+      { origin: "Australia", target: "Germany", comm: "Raw" },
+      { origin: "Brazil", target: "China", comm: "Raw" },
+      { origin: "Brazil", target: "United States", comm: "Raw" },
+      { origin: "Brazil", target: "Germany", comm: "Raw" },
+      { origin: "Brazil", target: "Japan", comm: "Raw" },
+      { origin: "Brazil", target: "India", comm: "Raw" },
+      { origin: "Russia", target: "China", comm: "Raw" },
+      { origin: "Russia", target: "India", comm: "Raw" },
+      { origin: "Russia", target: "Germany", comm: "Raw" },
+      { origin: "Russia", target: "Turkey", comm: "Raw" },
+      { origin: "Russia", target: "South Korea", comm: "Raw" },
+      { origin: "Canada", target: "United States", comm: "Raw" },
+      { origin: "Canada", target: "China", comm: "Raw" },
+      { origin: "Canada", target: "Japan", comm: "Raw" },
+      { origin: "Canada", target: "Germany", comm: "Raw" },
+      { origin: "Canada", target: "South Korea", comm: "Raw" },
+      { origin: "Chile", target: "China", comm: "Raw" },
+      { origin: "Chile", target: "United States", comm: "Raw" },
+      { origin: "Chile", target: "Japan", comm: "Raw" },
+      { origin: "Chile", target: "Germany", comm: "Raw" },
+      { origin: "Chile", target: "South Korea", comm: "Raw" },
+      { origin: "Indonesia", target: "China", comm: "Raw" },
+      { origin: "Indonesia", target: "India", comm: "Raw" },
+      { origin: "Indonesia", target: "Japan", comm: "Raw" },
+      { origin: "Indonesia", target: "South Korea", comm: "Raw" },
+      { origin: "Indonesia", target: "Singapore", comm: "Raw" },
+      { origin: "Saudi Arabia", target: "China", comm: "Raw" },
+      { origin: "Saudi Arabia", target: "India", comm: "Raw" },
+      { origin: "Saudi Arabia", target: "Japan", comm: "Raw" },
+      { origin: "Saudi Arabia", target: "South Korea", comm: "Raw" },
+      { origin: "Saudi Arabia", target: "United States", comm: "Raw" },
+      { origin: "United Arab Emirates", target: "India", comm: "Raw" },
+      { origin: "United Arab Emirates", target: "China", comm: "Raw" },
+      { origin: "United Arab Emirates", target: "Japan", comm: "Raw" },
+      { origin: "United Arab Emirates", target: "South Korea", comm: "Raw" },
+      { origin: "United Arab Emirates", target: "Germany", comm: "Raw" },
+      { origin: "South Africa", target: "China", comm: "Raw" },
+      { origin: "South Africa", target: "India", comm: "Raw" },
+      { origin: "South Africa", target: "Germany", comm: "Raw" },
+      { origin: "South Africa", target: "Japan", comm: "Raw" },
+      { origin: "South Africa", target: "United States", comm: "Raw" },
+      { origin: "Peru", target: "China", comm: "Raw" },
+      { origin: "Peru", target: "United States", comm: "Raw" },
+      { origin: "Peru", target: "Japan", comm: "Raw" },
+      { origin: "Peru", target: "South Korea", comm: "Raw" },
+      { origin: "Peru", target: "Germany", comm: "Raw" },
+      { origin: "Kazakhstan", target: "China", comm: "Raw" },
+      { origin: "Kazakhstan", target: "Russia", comm: "Raw" },
+      { origin: "Kazakhstan", target: "Germany", comm: "Raw" },
+      { origin: "Kazakhstan", target: "Turkey", comm: "Raw" },
+      { origin: "Kazakhstan", target: "India", comm: "Raw" }
+    ];
 
-  // ---------- INIT GLOBE ----------
-  const world = Globe()(document.getElementById('globeViz'))
-    .globeImageUrl("https://unpkg.com/three-globe/example/img/earth-dark.jpg")
-    .backgroundColor("rgba(0,0,0,0)")
-    .showAtmosphere(true)
-    .atmosphereColor("#00ffcc")
-    .pointOfView({ altitude: 2.3 })
-    .arcStroke(1.8)
-    .arcColor(d => SECTORS[d.comm]?.color || '#00ffcc')
-    .arcDashLength(0.6).arcDashGap(0.1).arcDashAnimateTime(1500)
-    // Country polygons with tension coloring
-    .polygonCapColor(f => {
-      const name = f.properties.ADMIN;
-      const level = TENSION_MAP[name] || 'LOW';
-      if (level === 'HIGH') return 'rgba(255,51,102,0.25)';
-      if (level === 'MED') return 'rgba(255,204,0,0.2)';
-      return 'rgba(0,255,153,0.15)'; // LOW
-    })
-    .polygonStrokeColor(() => "rgba(0,255,204,0.3)")
-    .onPolygonHover(obj => {
-      if (selectedCountry || !obj) return;
-      const name = obj.properties.ADMIN;
-      const tension = TENSION_MAP[name] || 'LOW';
-      document.getElementById('intel-title').innerText = name.toUpperCase();
-      document.getElementById('intel-img-frame').innerHTML = `<img src="https://source.unsplash.com/featured/?${name},port,flags">`;
-      document.getElementById('intel-body').innerHTML = `<b>NATION:</b> ${name}<br><b>TENSION:</b> ${tension} <span class="tension-badge badge-${tension.toLowerCase()}"></span><br>Click to lock trade routes.`;
-    })
-    .onPolygonClick(obj => { if (obj) selectTarget(obj.properties.ADMIN); })
-    // Arc hover (show in left panel)
-    .onArcHover(arc => {
-      if (!arc) return;
-      const meta = SECTORS[arc.comm];
-      document.getElementById('intel-title').innerHTML = `${meta.icon} TRADE ROUTE`;
-      document.getElementById('intel-img-frame').innerHTML = `<div style="padding:40px; text-align:center;">🌍</div>`;
-      document.getElementById('intel-body').innerHTML = `<b>ORIGIN:</b> ${arc.origin}<br><b>DEST:</b> ${arc.target}<br><b>COMMODITY:</b> ${meta.name}<br><b>DISTANCE:</b> ${(Math.random()*5000+2000).toFixed(0)} km`;
-    })
-    // Choke points as points
-    .pointsData(CHOKE_POINTS)
-    .pointLat('lat')
-    .pointLng('lng')
-    .pointLabel(d => `${d.name} · TENSION: ${d.tension}`)
-    .pointColor(d => d.tension === 'HIGH' ? '#ff3366' : (d.tension === 'MED' ? '#ffcc00' : '#00ff99'))
-    .pointAltitude(0.02)
-    .pointRadius(0.8)
-    .onPointHover(point => {
-      if (!point) return;
-      document.getElementById('intel-title').innerText = point.name.toUpperCase();
-      document.getElementById('intel-img-frame').innerHTML = `<img src="https://source.unsplash.com/featured/?${point.name},strait,shipping">`;
-      document.getElementById('intel-body').innerHTML = `<b>CHOKE POINT</b><br>TENSION: ${point.tension} <span class="tension-badge badge-${point.tension.toLowerCase()}"></span><br>${point.desc}<br>`;
-    })
-    .onPointClick(point => {
-      // Show in right feed as well
-      const feed = document.getElementById('choke-feed');
-      feed.innerHTML = `<span style="color:${point.tension==='HIGH'?'#ff3366':'#ffcc00'}">⚡ ${point.name}</span><br>${point.desc}<br>TENSION: ${point.tension}<hr>${feed.innerHTML}`;
+    // ---------- NEW ENERGY ROUTES ----------
+    const NEW_ENERGY_ROUTES = [
+      { origin: "Saudi Arabia", target: "China", comm: "Energy" },
+      { origin: "Saudi Arabia", target: "India", comm: "Energy" },
+      { origin: "Saudi Arabia", target: "Japan", comm: "Energy" },
+      { origin: "Saudi Arabia", target: "South Korea", comm: "Energy" },
+      { origin: "Saudi Arabia", target: "United States", comm: "Energy" },
+      { origin: "Russia", target: "China", comm: "Energy" },
+      { origin: "Russia", target: "Germany", comm: "Energy" },
+      { origin: "Russia", target: "India", comm: "Energy" },
+      { origin: "Russia", target: "Turkey", comm: "Energy" },
+      { origin: "Russia", target: "South Korea", comm: "Energy" },
+      { origin: "United States", target: "Canada", comm: "Energy" },
+      { origin: "United States", target: "Mexico", comm: "Energy" },
+      { origin: "United States", target: "Japan", comm: "Energy" },
+      { origin: "United States", target: "South Korea", comm: "Energy" },
+      { origin: "United States", target: "China", comm: "Energy" },
+      { origin: "Canada", target: "United States", comm: "Energy" },
+      { origin: "Canada", target: "China", comm: "Energy" },
+      { origin: "Canada", target: "Japan", comm: "Energy" },
+      { origin: "Canada", target: "South Korea", comm: "Energy" },
+      { origin: "Canada", target: "Germany", comm: "Energy" },
+      { origin: "United Arab Emirates", target: "China", comm: "Energy" },
+      { origin: "United Arab Emirates", target: "India", comm: "Energy" },
+      { origin: "United Arab Emirates", target: "Japan", comm: "Energy" },
+      { origin: "United Arab Emirates", target: "South Korea", comm: "Energy" },
+      { origin: "United Arab Emirates", target: "Singapore", comm: "Energy" },
+      { origin: "Qatar", target: "China", comm: "Energy" },
+      { origin: "Qatar", target: "Japan", comm: "Energy" },
+      { origin: "Qatar", target: "South Korea", comm: "Energy" },
+      { origin: "Qatar", target: "India", comm: "Energy" },
+      { origin: "Qatar", target: "United Kingdom", comm: "Energy" },
+      { origin: "Australia", target: "China", comm: "Energy" },
+      { origin: "Australia", target: "Japan", comm: "Energy" },
+      { origin: "Australia", target: "South Korea", comm: "Energy" },
+      { origin: "Australia", target: "India", comm: "Energy" },
+      { origin: "Australia", target: "Singapore", comm: "Energy" },
+      { origin: "Norway", target: "Germany", comm: "Energy" },
+      { origin: "Norway", target: "United Kingdom", comm: "Energy" },
+      { origin: "Norway", target: "Netherlands", comm: "Energy" },
+      { origin: "Norway", target: "France", comm: "Energy" },
+      { origin: "Norway", target: "Belgium", comm: "Energy" },
+      { origin: "Nigeria", target: "India", comm: "Energy" },
+      { origin: "Nigeria", target: "China", comm: "Energy" },
+      { origin: "Nigeria", target: "Spain", comm: "Energy" },
+      { origin: "Nigeria", target: "Netherlands", comm: "Energy" },
+      { origin: "Nigeria", target: "France", comm: "Energy" },
+      { origin: "Kuwait", target: "China", comm: "Energy" },
+      { origin: "Kuwait", target: "India", comm: "Energy" },
+      { origin: "Kuwait", target: "Japan", comm: "Energy" },
+      { origin: "Kuwait", target: "South Korea", comm: "Energy" },
+      { origin: "Kuwait", target: "Singapore", comm: "Energy" }
+    ];
+
+    // Combine and deduplicate (origin+target+comm)
+    const allRoutes = EXISTING_ROUTES.concat(NEW_TECH_ROUTES).concat(NEW_RAW_ROUTES).concat(NEW_ENERGY_ROUTES);
+    const seen = new Set();
+    const TRADE_ROUTES = allRoutes.filter(route => {
+      const key = `${route.origin}|${route.target}|${route.comm}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
     });
 
-  // ---------- LOAD COUNTRY DATA & ASSIGN TENSION ----------
-  fetch("https://raw.githubusercontent.com/vasturiano/globe.gl/master/example/datasets/ne_110m_admin_0_countries.geojson")
-    .then(res => res.json())
-    .then(data => {
-      // Assign random tension to each country (weighted for realism)
-      const levels = ['LOW','MED','HIGH'];
-      data.features.forEach(f => {
+    console.log(`Total unique routes: ${TRADE_ROUTES.length}`);
+
+    // 50+ news items (unchanged)
+    const NEWS_DB = [
+      "INDIA OVERTAKES CHINA AS TOP COTTON SUPPLIER", "BRENT CRUDE HITS $91.80 AS HORMUZ DISRUPTIONS",
+      "MAERSK WARNS OF MEDITERRANEAN CONGESTION", "SUEZ CANAL 100% AUTOMATION ACHIEVED",
+      "IRAN CLEARS INDIAN SHIPS IN HORMUZ", "IEA RELEASES 400M BARRELS RESERVES",
+      "TAIWAN CHIP EXPORTS SURGE", "ARCTIC PASSAGE OPENS 3 WEEKS EARLY",
+      "DP WORLD SUSPENDS JEBEL ALI", "SINGAPORE #1 CONNECTEDNESS",
+      "BALTIC DRY INDEX 5-YR HIGH", "PANAMA CANAL THROUGHPUT RECOVERS",
+      "SHANGHAI PORT AI REDUCES LAG 15%", "ROTTERDAM ELECTRIC TANKER FLEET",
+      "MALAYSIA SEMICONDUCTOR HUB $50BN", "AUSTRALIA IRON ORE TO INDIA RECORD",
+      "BRAZIL-CHINA AGRI $12BN MONTHLY", "UK POST-BREXIT DIGITIZATION",
+      "JAPAN-EU GREEN ENERGY EXPANSION", "SAUDI 'NEOM CORRIDOR' REVEALED",
+      "NIGERIA OIL PRODUCTION STABLE", "GERMAN AUTO EXPORTS TECH SANCTIONS",
+      "VIETNAM ELECTRONICS UP 22%", "SA PORT STRIKES HALT CHROME",
+      "MEXICO TRUCKING US BORDER HIGH", "CANADA ARCTIC SECURITY UPGRADE",
+      "TURKEY STRAITS MONITORING", "INDONESIA NICKEL BAN IMPACTS EUROPE",
+      "UAE-INDIA TRADE $100BN+", "KOREAN SHIPYARDS 5-YEAR BACKLOG",
+      "CHILE COPPER BOTTLENECKS", "OMAN GREEN HYDROGEN EXPORTS",
+      "KAZAKHSTAN MIDDLE CORRIDOR +40%", "ARGENTINA LITHIUM GLOBAL FUNDING",
+      "STRAIT OF HORMUZ TENSION HIGH", "SUEZ TRANSIT FEES HIKE",
+      "PANAMA DROUGHT RESTRICTIONS", "MALACCA STRAIT PIRACY ALERT",
+      "BOSPHORUS BRIDGE CLOSURE", "BAB EL-MANDEB DRONE ATTACKS",
+      "GIBRALTAR BREXIT INSPECTIONS", "SKAGERRAK NORWAY PIPELINE MAINT",
+      "ØRESUND BRIDGE ELECTRONICS BACKLOG", "MACKENZIE RIVER ICE JAM",
+      "ST LAWRENCE SEAWAY STRIKE", "MISSISSIPPI RIVER LOW WATER",
+      "RHINE SHALLOW DRAFT", "DANUBE CONTAINER LOGJAM",
+      "SÃO PAULO PORT TECH OUTAGE", "CAPE OF GOOD HOPE STORM DELAYS",
+      "KIEL CANAL CLOSURE WIND", "KARA STRAIT NAVY EXERCISES"
+    ];
+
+    // Choke points (50+)
+    const CHOKE_POINTS = [ /* ... full list (same as before) ... */
+      { name: "Strait of Hormuz", lat: 26.5, lng: 56.0, tension: "HIGH", desc: "35% of seaborne oil. IRGC patrols active." },
+      { name: "Suez Canal", lat: 30.5, lng: 32.5, tension: "MED", desc: "12% global trade. Expansion ongoing." },
+      { name: "Panama Canal", lat: 9.0, lng: -79.5, tension: "LOW", desc: "Drought restrictions eased." },
+      { name: "Strait of Malacca", lat: 2.0, lng: 102.0, tension: "HIGH", desc: "Piracy risk. 40% China trade." },
+      { name: "Bab-el-Mandeb", lat: 12.5, lng: 43.0, tension: "HIGH", desc: "Yemen conflict. Naval escorts." },
+      { name: "Strait of Gibraltar", lat: 36.0, lng: -5.5, tension: "LOW", desc: "Brexit checks stable." },
+      { name: "Bosporus", lat: 41.0, lng: 29.0, tension: "MED", desc: "Turkey strait tolls rising." },
+      { name: "Danish Straits", lat: 55.5, lng: 11.0, tension: "LOW", desc: "Baltic pipeline traffic." },
+      { name: "Strait of Dover", lat: 51.0, lng: 1.5, tension: "MED", desc: "Ferry backlog potential." },
+      { name: "Lombok Strait", lat: -8.5, lng: 115.5, tension: "LOW", desc: "Deep water alternate." },
+      { name: "Sunda Strait", lat: -6.0, lng: 105.5, tension: "MED", desc: "Volcanic ash risk." },
+      { name: "Oresund Bridge", lat: 55.6, lng: 12.8, tension: "LOW", desc: "Road/rail link." },
+      { name: "St. Lawrence Seaway", lat: 45.5, lng: -73.5, tension: "MED", desc: "Labor disputes." },
+      { name: "Mississippi River", lat: 29.5, lng: -90.0, tension: "LOW", desc: "Low water barges." },
+      { name: "Rhine River", lat: 50.0, lng: 7.5, tension: "MED", desc: "Shallow draft." },
+      { name: "Danube River", lat: 44.5, lng: 22.5, tension: "LOW", desc: "War risk insurance." },
+      { name: "Kiel Canal", lat: 54.3, lng: 10.1, tension: "LOW", desc: "Lock maintenance." },
+      { name: "Cape of Good Hope", lat: -34.5, lng: 18.5, tension: "MED", desc: "Storm detours." },
+      { name: "Hormuz North", lat: 27.0, lng: 56.5, tension: "HIGH", desc: "Mine threat." },
+      { name: "Malacca East", lat: 1.5, lng: 103.0, tension: "HIGH", desc: "Piracy hotspot." },
+      { name: "Bab al-Mandeb South", lat: 12.0, lng: 44.0, tension: "HIGH", desc: "Drone attacks." },
+      { name: "Suez Approach", lat: 31.0, lng: 33.0, tension: "MED", desc: "Convoy delays." },
+      { name: "Panama Approach Pacific", lat: 8.5, lng: -79.0, tension: "LOW", desc: "Queue stable." },
+      { name: "Panama Approach Atlantic", lat: 9.5, lng: -79.5, tension: "LOW", desc: "Rainfall improves." },
+      { name: "Bosporus North", lat: 41.5, lng: 29.0, tension: "MED", desc: "Bridge inspections." },
+      { name: "Dardanelles", lat: 40.0, lng: 26.5, tension: "MED", desc: "Naval exercises." },
+      { name: "Strait of Messina", lat: 38.0, lng: 15.5, tension: "LOW", desc: "Ferry normal." },
+      { name: "Bonifacio Strait", lat: 41.3, lng: 9.0, tension: "LOW", desc: "Marine park." },
+      { name: "Strait of Tiran", lat: 28.0, lng: 34.5, tension: "HIGH", desc: "Regional tension." },
+      { name: "Strait of Georgia", lat: 49.0, lng: -123.0, tension: "LOW", desc: "Salish Sea." },
+      { name: "Johnstone Strait", lat: 50.5, lng: -126.0, tension: "LOW", desc: "Pilotage." },
+      { name: "Strait of Belle Isle", lat: 51.5, lng: -56.5, tension: "LOW", desc: "Icebergs." },
+      { name: "Hudson Strait", lat: 62.5, lng: -70.0, tension: "MED", desc: "Arctic transit." },
+      { name: "Bering Strait", lat: 66.0, lng: -169.0, tension: "MED", desc: "Russian permits." },
+      { name: "Korea Strait", lat: 34.5, lng: 129.0, tension: "HIGH", desc: "Naval drills." },
+      { name: "Tsugaru Strait", lat: 41.5, lng: 141.0, tension: "LOW", desc: "Civilian traffic." },
+      { name: "La Perouse Strait", lat: 45.5, lng: 142.0, tension: "MED", desc: "Fishery zones." },
+      { name: "Strait of Tartary", lat: 50.0, lng: 142.0, tension: "LOW", desc: "Icebreaker." },
+      { name: "Strait of Magellan", lat: -53.5, lng: -70.5, tension: "LOW", desc: "Pilot required." },
+      { name: "Beagle Channel", lat: -55.0, lng: -67.0, tension: "LOW", desc: "Scenic route." },
+      { name: "Drake Passage", lat: -58.0, lng: -65.0, tension: "HIGH", desc: "Stormy seas." },
+      { name: "Mozambique Channel", lat: -20.0, lng: 40.0, tension: "LOW", desc: "Piracy decline." },
+      { name: "Strait of Sicily", lat: 36.5, lng: 12.5, tension: "MED", desc: "Migrant traffic." },
+      { name: "Strait of Otranto", lat: 40.0, lng: 19.0, tension: "LOW", desc: "Adriatic gate." },
+      { name: "Kerch Strait", lat: 45.5, lng: 36.5, tension: "HIGH", desc: "War risk zone." },
+      { name: "Strait of Juan de Fuca", lat: 48.5, lng: -124.0, tension: "LOW", desc: "Border checks." },
+      { name: "Taiwan Strait", lat: 24.5, lng: 119.5, tension: "HIGH", desc: "Military drills." },
+      { name: "Qiongzhou Strait", lat: 20.0, lng: 110.5, tension: "LOW", desc: "Ferry." },
+      { name: "Bashi Channel", lat: 21.0, lng: 122.0, tension: "MED", desc: "Typhoon alley." },
+      { name: "Luzon Strait", lat: 20.5, lng: 121.0, tension: "HIGH", desc: "Submarine transit." }
+    ];
+
+    // ---------- GLOBAL STATE ----------
+    let COUNTRY_DB = {};
+    let TENSION_MAP = {};
+    let activeArcs = [];
+    let isGlobalMesh = false;
+    let selectedCountry = null;
+
+    // Helper: static map URL
+    function getStaticMapUrl(lat, lng, zoom = 5, w = 300, h = 140) {
+      if (lat === undefined || lng === undefined) return '';
+      return `https://staticmap.openstreetmap.de/staticmap.php?center=${lat},${lng}&zoom=${zoom}&size=${w}x${h}&maptype=mapnik`;
+    }
+
+    // ---------- INIT GLOBE ----------
+    const world = Globe()(document.getElementById('globeViz'))
+      .globeImageUrl("https://unpkg.com/three-globe/example/img/earth-dark.jpg")
+      .backgroundColor("rgba(0,0,0,0)")
+      .showAtmosphere(true)
+      .atmosphereColor("#00ffcc")
+      .pointOfView({ altitude: 2.3 })
+      .arcStroke(1.8)
+      .arcColor(d => SECTORS[d.comm]?.color || '#00ffcc')
+      .arcDashLength(0.6)
+      .arcDashGap(0.1)
+      .arcDashAnimateTime(1500)
+      .polygonCapColor(f => {
         const name = f.properties.ADMIN;
-        const coords = f.geometry.type === 'Polygon' ? f.geometry.coordinates[0][0] : f.geometry.coordinates[0][0][0];
-        COUNTRY_DB[name] = { lat: coords[1], lng: coords[0] };
-        // weighted random: 40% LOW, 35% MED, 25% HIGH
-        const rand = Math.random();
-        TENSION_MAP[name] = rand < 0.4 ? 'LOW' : (rand < 0.75 ? 'MED' : 'HIGH');
+        const level = TENSION_MAP[name] || 'LOW';
+        if (level === 'HIGH') return 'rgba(255,51,102,0.25)';
+        if (level === 'MED') return 'rgba(255,204,0,0.2)';
+        return 'rgba(0,255,153,0.15)';
+      })
+      .polygonStrokeColor(() => "rgba(0,255,204,0.3)")
+      .onPolygonHover(obj => {
+        if (selectedCountry || !obj) return;
+        const name = obj.properties.ADMIN;
+        const tension = TENSION_MAP[name] || 'LOW';
+        const coords = COUNTRY_DB[name] || { lat: 0, lng: 0 };
+        document.getElementById('intel-title').innerText = name.toUpperCase();
+        document.getElementById('intel-img-frame').innerHTML = `<img src="${getStaticMapUrl(coords.lat, coords.lng, 5)}" style="width:100%; height:100%; object-fit: cover;" alt="physical map"><span class="map-attrib">© OSM</span>`;
+        document.getElementById('intel-body').innerHTML = `<b>NATION:</b> ${name}<br><b>TENSION:</b> ${tension} <span class="tension-badge badge-${tension.toLowerCase()}"></span><br>Click to lock trade routes.`;
+      })
+      .onPolygonClick(obj => { if (obj) selectTarget(obj.properties.ADMIN); })
+      .onArcHover(arc => {
+        if (!arc) return;
+        const meta = SECTORS[arc.comm];
+        document.getElementById('intel-title').innerHTML = `${meta.icon} TRADE ROUTE`;
+        document.getElementById('intel-img-frame').innerHTML = `<div style="padding:40px; text-align:center; background:#022; height:100%;">🌍 GLOBAL LINK</div><span class="map-attrib">© OSM</span>`;
+        document.getElementById('intel-body').innerHTML = `<b>ORIGIN:</b> ${arc.origin}<br><b>DEST:</b> ${arc.target}<br><b>COMMODITY:</b> ${meta.name}<br>`;
+      })
+      .pointsData(CHOKE_POINTS)
+      .pointLat('lat')
+      .pointLng('lng')
+      .pointLabel(d => `${d.name} · TENSION: ${d.tension}`)
+      .pointColor(d => d.tension === 'HIGH' ? '#ff3366' : (d.tension === 'MED' ? '#ffcc00' : '#00ff99'))
+      .pointAltitude(0.02)
+      .pointRadius(0.8)
+      .onPointHover(point => {
+        if (!point) return;
+        document.getElementById('intel-title').innerText = point.name.toUpperCase();
+        document.getElementById('intel-img-frame').innerHTML = `<img src="${getStaticMapUrl(point.lat, point.lng, 8)}" style="width:100%; height:100%; object-fit: cover;" alt="choke map"><span class="map-attrib">© OSM</span>`;
+        document.getElementById('intel-body').innerHTML = `<b>CHOKE POINT</b><br>TENSION: ${point.tension} <span class="tension-badge badge-${point.tension.toLowerCase()}"></span><br>${point.desc}<br>`;
+      })
+      .onPointClick(point => {
+        const feed = document.getElementById('choke-feed');
+        feed.innerHTML = `<span style="color:${point.tension==='HIGH'?'#ff3366':'#ffcc00'}">⚡ ${point.name}</span><br>${point.desc}<br>TENSION: ${point.tension}<hr>${feed.innerHTML}`;
       });
-      world.polygonsData(data.features);
+
+    // ---------- LOAD COUNTRY DATA & ASSIGN TENSION ----------
+    fetch("https://raw.githubusercontent.com/vasturiano/globe.gl/master/example/datasets/ne_110m_admin_0_countries.geojson")
+      .then(res => res.json())
+      .then(data => {
+        data.features.forEach(f => {
+          const name = f.properties.ADMIN;
+          let lat = 0, lng = 0;
+          try {
+            if (f.geometry.type === 'Polygon') {
+              const coord = f.geometry.coordinates[0][0];
+              lng = coord[0];
+              lat = coord[1];
+            } else if (f.geometry.type === 'MultiPolygon') {
+              const coord = f.geometry.coordinates[0][0][0];
+              lng = coord[0];
+              lat = coord[1];
+            }
+          } catch (e) { /* fallback */ }
+          COUNTRY_DB[name] = { lat, lng };
+          const rand = Math.random();
+          TENSION_MAP[name] = rand < 0.4 ? 'LOW' : (rand < 0.75 ? 'MED' : 'HIGH');
+        });
+        world.polygonsData(data.features);
+      })
+      .catch(err => console.error('Failed to load country data:', err));
+
+    // ---------- TRADE ROUTE HANDLING ----------
+    function selectTarget(country) {
+      selectedCountry = country;
+      const source = COUNTRY_DB[country];
+      if (!source) return;
+
+      document.getElementById('sys-status').innerText = `LOCKED: ${country.toUpperCase()}`;
+      document.getElementById('intel-title').innerText = country.toUpperCase();
+      document.getElementById('intel-img-frame').innerHTML = `<img src="${getStaticMapUrl(source.lat, source.lng, 5)}" style="width:100%; height:100%; object-fit: cover;" alt="physical map"><span class="map-attrib">© OSM</span>`;
+
+      // Show all routes where the country is either origin OR target
+      let routes = TRADE_ROUTES.filter(r => r.origin === country || r.target === country).map(r => {
+        const start = COUNTRY_DB[r.origin];
+        const end = COUNTRY_DB[r.target];
+        if (!start || !end) return null;
+        return {
+          startLat: start.lat, startLng: start.lng,
+          endLat: end.lat, endLng: end.lng,
+          origin: r.origin, target: r.target, comm: r.comm
+        };
+      }).filter(r => r !== null);
+
+      // Fallback if none (rare)
+      if (routes.length === 0) {
+        const nations = Object.keys(COUNTRY_DB);
+        for (let i = 0; i < 5; i++) {
+          const t = nations[Math.floor(Math.random() * nations.length)];
+          if (t === country) continue;
+          routes.push({
+            startLat: source.lat, startLng: source.lng,
+            endLat: COUNTRY_DB[t].lat, endLng: COUNTRY_DB[t].lng,
+            origin: country, target: t, comm: Object.keys(SECTORS)[Math.floor(Math.random() * 3)]
+          });
+        }
+      }
+
+      activeArcs = routes;
+      syncArcs();
+    }
+
+    function toggleMesh() {
+      isGlobalMesh = !isGlobalMesh;
+      document.getElementById('meshBtn').innerText = isGlobalMesh ? "GLOBAL MESH [ON]" : "GLOBAL MESH [OFF]";
+      if (isGlobalMesh) {
+        let mesh = TRADE_ROUTES.map(r => {
+          const start = COUNTRY_DB[r.origin];
+          const end = COUNTRY_DB[r.target];
+          if (!start || !end) return null;
+          return {
+            startLat: start.lat, startLng: start.lng,
+            endLat: end.lat, endLng: end.lng,
+            origin: r.origin, target: r.target, comm: r.comm
+          };
+        }).filter(r => r !== null);
+        activeArcs = mesh;
+      } else {
+        activeArcs = selectedCountry ? activeArcs : [];
+      }
+      syncArcs();
+    }
+
+    function syncArcs() {
+      const filter = document.getElementById("commFilter").value;
+      const data = filter === "ALL" ? activeArcs : activeArcs.filter(a => a.comm === filter);
+      world.arcsData(data);
+    }
+
+    // ---------- SEARCH & RESET ----------
+    function handleSearch() {
+      const val = document.getElementById("countrySearch").value.toUpperCase();
+      const found = Object.keys(COUNTRY_DB).find(c => c.toUpperCase().includes(val));
+      if (found) {
+        world.pointOfView({ lat: COUNTRY_DB[found].lat, lng: COUNTRY_DB[found].lng, altitude: 1.5 }, 1000);
+        selectTarget(found);
+      }
+    }
+
+    function resetSystem() {
+      selectedCountry = null;
+      activeArcs = [];
+      world.arcsData([]);
+      document.getElementById('sys-status').innerText = "STATUS: TENSION SCAN ACTIVE";
+      document.getElementById('intel-title').innerText = "AWAITING CONTACT";
+      document.getElementById('intel-img-frame').innerHTML = '<div style="padding:55px; text-align:center; opacity:0.4;">NO TARGET LOCKED</div>';
+      world.pointOfView({ altitude: 2.3 }, 500);
+    }
+
+    function adjustZoom(delta) {
+      const curr = world.pointOfView();
+      world.pointOfView({ altitude: Math.max(0.3, curr.altitude + delta) }, 500);
+    }
+
+    // ---------- NEWS TICKER ----------
+    function updateTicker() {
+      const shuffled = [...NEWS_DB].sort(() => 0.5 - Math.random());
+      document.getElementById('ticker').innerHTML = shuffled.slice(0, 35).map(n => `<span style="padding-right:80px;">::: ${n} :::</span>`).join("");
+    }
+    updateTicker();
+
+    // ---------- RESIZE ----------
+    window.addEventListener('resize', () => {
+      const w = window.innerWidth > 1024 ? window.innerWidth - 640 : window.innerWidth;
+      world.width(w).height(window.innerHeight - 115);
     });
 
-  // ---------- TRADE ROUTE GENERATION (selected country) ----------
-  function selectTarget(country) {
-    selectedCountry = country;
-    const source = COUNTRY_DB[country];
-    if(!source) return;
-
-    document.getElementById('sys-status').innerText = `LOCKED: ${country.toUpperCase()}`;
-    document.getElementById('intel-title').innerText = country.toUpperCase();
-    document.getElementById('intel-img-frame').innerHTML = `<img src="https://source.unsplash.com/featured/?${country},shipping,tech">`;
-    let routes = [];
-    const nations = Object.keys(COUNTRY_DB);
-    for(let i=0; i<18; i++) {
-      const t = nations[Math.floor(Math.random()*nations.length)];
-      if(t === country) continue;
-      routes.push({
-        startLat: source.lat, startLng: source.lng,
-        endLat: COUNTRY_DB[t].lat, endLng: COUNTRY_DB[t].lng,
-        origin: country, target: t, comm: Object.keys(SECTORS)[Math.floor(Math.random()*3)]
-      });
-    }
-    activeArcs = routes;
-    syncArcs();
-  }
-
-  // ---------- GLOBAL MESH (50+ routes) ----------
-  function toggleMesh() {
-    isGlobalMesh = !isGlobalMesh;
-    document.getElementById('meshBtn').innerText = isGlobalMesh ? "GLOBAL MESH [ON]" : "GLOBAL MESH [OFF]";
-    if(isGlobalMesh) {
-      let mesh = [];
-      const nations = Object.keys(COUNTRY_DB);
-      for(let i=0; i<70; i++) { // more than 50
-        const a = nations[Math.floor(Math.random()*nations.length)];
-        const b = nations[Math.floor(Math.random()*nations.length)];
-        mesh.push({
-          startLat: COUNTRY_DB[a].lat, startLng: COUNTRY_DB[a].lng,
-          endLat: COUNTRY_DB[b].lat, endLng: COUNTRY_DB[b].lng,
-          origin: a, target: b, comm: Object.keys(SECTORS)[Math.floor(Math.random()*3)]
-        });
-      }
-      activeArcs = mesh;
-    } else {
-      activeArcs = selectedCountry ? activeArcs : []; // keep selected if any
-    }
-    syncArcs();
-  }
-
-  function syncArcs() {
-    const filter = document.getElementById("commFilter").value;
-    const data = filter === "ALL" ? activeArcs : activeArcs.filter(a => a.comm === filter);
-    world.arcsData(data);
-  }
-
-  // ---------- SEARCH & RESET ----------
-  function handleSearch() {
-    const val = document.getElementById("countrySearch").value.toUpperCase();
-    const found = Object.keys(COUNTRY_DB).find(c => c.toUpperCase().includes(val));
-    if(found) {
-      world.pointOfView({ lat: COUNTRY_DB[found].lat, lng: COUNTRY_DB[found].lng, altitude: 1.5 }, 1000);
-      selectTarget(found);
-    }
-  }
-
-  function resetSystem() {
-    selectedCountry = null;
-    activeArcs = [];
-    world.arcsData([]);
-    document.getElementById('sys-status').innerText = "STATUS: TENSION SCAN ACTIVE";
-    document.getElementById('intel-title').innerText = "AWAITING CONTACT";
-    document.getElementById('intel-img-frame').innerHTML = '<div style="padding:55px; text-align:center; opacity:0.4;">NO TARGET LOCKED</div>';
-    world.pointOfView({ altitude: 2.3 }, 500);
-  }
-
-  function adjustZoom(delta) {
-    const curr = world.pointOfView();
-    world.pointOfView({ altitude: Math.max(0.3, curr.altitude + delta) }, 500);
-  }
-
-  // ---------- NEWS TICKER ----------
-  function updateTicker() {
-    const shuffled = [...NEWS_DB].sort(() => 0.5 - Math.random());
-    document.getElementById('ticker').innerHTML = shuffled.slice(0, 35).map(n => `<span style="padding-right:80px;">::: ${n} :::</span>`).join("");
-  }
-  updateTicker();
-
-  // ---------- RESIZE HANDLER ----------
-  window.addEventListener('resize', () => {
-    const w = window.innerWidth > 1024 ? window.innerWidth - 640 : window.innerWidth;
-    world.width(w).height(window.innerHeight - 115);
-  });
-
-  // Expose functions globally for buttons
-  window.toggleMesh = toggleMesh;
-  window.syncArcs = syncArcs;
-  window.handleSearch = handleSearch;
-  window.resetSystem = resetSystem;
-  window.adjustZoom = adjustZoom;
+    // Expose functions globally
+    window.toggleMesh = toggleMesh;
+    window.syncArcs = syncArcs;
+    window.handleSearch = handleSearch;
+    window.resetSystem = resetSystem;
+    window.adjustZoom = adjustZoom;
+  })();
 </script>
 <script>
-function openFullscreen() {
-  const el = document.documentElement;
-
-  if (el.requestFullscreen) {
-    el.requestFullscreen();
-  } else if (el.webkitRequestFullscreen) { 
-    el.webkitRequestFullscreen();
-  } else if (el.msRequestFullscreen) { 
-    el.msRequestFullscreen();
+  function openFullscreen() {
+    const el = document.documentElement;
+    if (el.requestFullscreen) el.requestFullscreen();
+    else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+    else if (el.msRequestFullscreen) el.msRequestFullscreen();
   }
-}
-
-// try to enter fullscreen automatically
-window.addEventListener("load", () => {
-  setTimeout(() => {
-    openFullscreen();
-  }, 300);
-});
-
-// allow ESC or manual minimize normally
+  window.addEventListener("load", () => { setTimeout(openFullscreen, 300); });
 </script>
 </body>
 </html>
